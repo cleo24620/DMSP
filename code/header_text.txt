@@ -1,0 +1,142 @@
+ Many datasets on-line provide what is called ¡°level-1¡± and ¡°level-2¡± data to the community.
+ ¡°Level-1¡± data are the data with little or no checking or refining of the data.
+ ¡°Level-2¡± data have been cleaned up, checked, all the bad data either corrected or removed, and all the on-line data have been approved as valid and error free.
+ Creating a ¡°level-2¡± dataset takes a large amount of work and is something that is simply beyond the capacities of the two people (Drs.
+ Hairston and Coley) overseeing this database.
+ Ultimately there are over 30 satellite years of data here, and simply no way for just two people to check and verify every single orbit to determine that the reduction routine has performed correctly on every data point here.
+ So treat all these data in this database initially as ¡°level-1¡±.
+ Having said that, we do have a fairly high confidence in our data reduction procedure when the spacecraft is in a region of predominately O+ ions.
+ Most of the problems in the data occur in regions of predominately light ions and/or low plasma density.
+ We have flagged every four-second set of data with a two quality flags (one for the RPA data and one for the IDM data) to provide you with a guide on when to use and when to ignore the data.
+ Each flag has one of four values: 1 means the data are good and can be used with high confidence 2 means the data are somewhat questionable and should be used with caution 3 means the data are bad and should not be used at all 4 means the quality could not be determined for these data and so should probably not be used or (depending on the circumstances) used with caution On our plots here we color code the data to show the quality flags with 1 being black, 2 being yellow, 3 being red and 4 being blue.
+ The SSIES thermal plasma instruments are designed to work in a predominately O+ plasma.
+ Even in low-density plasmas (e.
+g.
+ 10^3 ions per cc) the instruments continue to produce usable data so long as the plasma is essentially all O+.
+ However, once the percentage of light ions (H+ and He+) goes above 15%, even under relatively high densities (e.
+g.
+ 10^4 -10^5 ions per cc) the quality of the data drops and the results cannot be used.
+ At the nominal altitude of 840 km the DMSP satellites are in the topside F-layer and the composition of the plasma varies with the solar cycle and the season of the year.
+ The general rules of thumb we use are these: Around solar maximum (1990, 2001) the scale height of O+ is high enough that the composition of the plasma at 840 km is greater than 90% at almost all points in the satellite¡¯s orbit and in those conditions the data are almost all good.
+ Around solar minimum (1995, 2006?) the O+ scale height has dropped so that the satellite is frequently in regions that are dominated by light ions where the instruments do not function properly and those data cannot be used.
+ Because the scale height drops further in darkness we end up with a situation where winter hemisphere data are worse that summer hemisphere conditions.
+ Thus around the solar minimum near the solstices, only the data from the summer hemisphere can be used and the winter hemisphere data are useless.
+ Around solar minimum and the equinoxes both hemispheres¡¯ data are marginal and should be treated with caution.
+ The best way to explain this is to look at two examples.
+ The first is an near solar maximum orbit from F13 on 30 March 2001 (day 89) plotted below.
+ The orbit starts at the equatorial crossing heading north at 1530 UT with the satellite in the presunset area at about 17:45 local time, goes over the north polar region, past the equator in the presunrise are at about 05:45 local time, then over the south polar region and ending back at the equator at 17:12 UT.
+ The bottom panel shows the total plasma density as the dark black line.
+ You can see that the total density is at its highest at the equator on the late afternoon with a value of about 2 x 10^5 ions/cc.
+ It is more or less constant at about 8 x 10^4 ions/cc throughout the remaining orbit except in the southern polar region where the density varies from about 1 x 10^5 to 4 x 10^3 ions/cc.
+ The lighter blue line below the dark line shows the density of the H+ plasma.
+ The highest percentage of H+ occurs around the southbound equatorial crossing at the local time of 05:45.
+ Here the satellite is crossing through predawn plasma that has been in darkness for about 11 hours so the O+ scale height has dropped during this time, thus increasing the percent of light ions in this region.
+ This line for the H+ density shows that it was always at least an order of magnitude below the total density except in this southbound equatorial region.
+ Thus the plasma is at least 90% O+ throughout most of the orbit, so most of the RPA and IDM data and the reduced parameters (velocity, ion temperature, etc.
+) are all reliable here.
+ The second from top panel shows the Vx (ram drift or parallel velocity) ion flow measured by the RPA.
+ There is a scatter in the data however the baseline of the Vx flow is essentially zero throughout the orbit thus indicating that the calculated data are good.
+ The third and fourth panels show the Vy (horizontal cross track) and Vz (vertical cross track) ion flows.
+ These data are essentially zero outside of the polar regions.
+ In both the north and south poles the Vy data clearly show the antisunward flows (-Vy) at the highest latitudes flanked by the sunward flows (+Vy).
+ A slight deviation from zero is seen in the Vy data near the southbound equatorial region and that is caused by the increased percentage of light ions.
+ Thus all the IDM flow data are color coded black (quality flag = 1) for this orbit, except for the portion around the southbound equatorial region which are color coded yellow (quality flag = 2) with some red (quality flag = 3) because of the increase in the light ions in the plasma in this region.
+ This is an example of a typical high quality orbit.
+ The second example is one of a typical low quality orbit.
+ The plot below shows data from F13 on taken from 27 June 1995 (day 178) under solar minimum conditions and it exhibits almost every type of bad data the satellite can encounter.
+ Since it is summer in the northern hemisphere it is daylight during the northern polar pass and the data are nominal.
+ However since it is winter in the southern hemisphere all the plasma there are in darkness, the scale heights of both O+ and the light ions have dropped and the plasma density at 840 km has decreased so much that essentially none of the data in the southern hemisphere are usable.
+ Again the orbit starts at the equator heading north at 0610 UT, goes over the north polar regions, heads south over the equator, passes over the south polar regions, and returns to the equator at 0754 UT.
+ At the beginning of the orbit the total density is an order of magnitude less than the equatorial density in the 2001 orbit (about 2 x 10^4 ions/cc vs.
+ 2 x 10^5 ions/cc) and it is predominately composed of light ions.
+ As the satellite tracks north it is not until it reaches about 50 degrees magnetic latitude that the percentage of O+ goes above 90%.
+ So only the IDM data in the northern polar cap above 45 degrees is judged to be usable (O+ > 85%).
+ As the satellite travels southward towards the equator the total density begins to drop along with the percentage of O+ in the plasma.
+ When the O+ percentage drops below 60% the Vy flows become increasingly negative in a region where Vy should be close to zero.
+ These spurious flows increase in magnitude as the O+ percentage drops.
+ Once the satellite crosses the equator into the darkness of the southern hemisphere the O+ percentage drops to zero and the Vy flow goes to huge erroneous values and the Vz flow values become non-zero.
+ At about -20 degrees magnetic latitude the plasma becomes 100% H+ and the Vy values have pegged at the extreme negative value, so the data values are set to fill data.
+ At about -45 degrees magnetic latitude some O+ (about 2%) returns and the drift data becomes less erroneous (though still far from usable).
+ At about -60 degrees magnetic latitude the satellite passes into the polar cap (open field lines) where total plasma density drops precipitously.
+ Once the total plasma density drops below 10^3 ions/cc, most of it H+, at that point the plasma instruments ¡°run out of gas¡±.
+ There is simply not enough high-mass plasma here for the RPA and the drift meter to function.
+ The parameters from the RPA (Vx, fractional amount of species in the plasma, ion temperature, total plasma density) all become fill data because no processing can be performed on the data.
+ (Note that nearer solar maximum conditions we do see regions drop below 10^3 ions/cc, but the RPA and driftmeter continue to function in the low density regions because the plasma is composed almost 100% of higher mass O+ ions.
+) Oddly, the two drift velocities, Vy and Vz, jump from their erroneous values to zero.
+ (The Vz data appear as a straight line on the figure.
+ The Vy data appear as a straight, sloped line on the figure because the corotation correction has been applied to the zero velocity flow data here.
+) The ductmeter, however, does continue to function in this low-density low-mass plasma so we can continue to obtain the total plasma density.
+ (This is why the total density derived from the ductmeter is presented on the plots instead of the RPA-derived total density.
+) At higher latitudes the total density increases enough that the RPA once again begins working and the driftmeter values go from zero to erroneous non-zero values.
+ As the satellite moves over to the duskside and begins to move northward it encounters another minute-long period between about -65 and -62 degrees magnetic latitude where the total density drop back below 10^3 ions/cc and the RPA and driftmeter again stop working temporarily.
+ As the satellite continues to move northward in the darkness of the winter hemisphere on the duskside the total plasma density returns to roughly 10^4 ions/cc but remains predominately a light-ion plasma up to the end of this orbit when the satellite reaches the equator.
+ The values for Vy and Vz remain erroneous throughout the rest of the orbit, although both are closer to zero (but still unusable) as the spacecraft nears the equator and passes back into sunlight.
+ The point of this is to show an example of an orbit where only the small region about the northern polar region (during northern summer) contains usable data.
+ The rest of the orbit contains data that, except for the ductmeter total density and the Langmuir probe electron temperature, are completely unusable.
+ While this is an extreme case, we present it here to show examples of the various types of bad data as well as what causes the bad data and what these data look like so the user will hopefully recognize them.
+ Here are the current criteria for setting the drift meter quality flags.
+ These will evolve as we go through more of the data, so check back here periodically to see if we have revised the rules.
+ (In general long stretches of good data or long stretches of bad data will never change.
+ The tweaking will be done around the edges of the good to fair data boundaries.
+) If there are no usable drift meter data points in the four-second period (n=0) then this is obviously bad and flagged as 3.
+ If the ductmeter density is less than 10^2 ions/cc then even with a 100% O+ plasma the drift meter data are probably bad and they are flagged as 3.
+ If the fraction of O+ is greater than 0.
+85 and the ductmeter density is greater than 10^3 ions/cc then we assume the drift meter data are good and they are flagged as 1.
+ If the fraction of O+ is greater than 0.
+85 and the ductmeter density is less than 10^3 ions/cc (and greater than 10^2 ions/cc since we¡¯ve already flagged those data) then we are not sure about the quality of the drift meter data and they are flagged as 2.
+ If the fraction of O+ is between 0.
+85 and 0.
+75 for any density above 10^2 ions/cc we are not sure about the quality of the drift meter data and they are flagged as 2.
+ If the fraction of O+ is below 0.
+75 for any density it is automatically assumed to be bad and those drift data are flagged as 3.
+ If there are fill data for the RPA and thus no value for the fractional amount of O+ we have no direct way to determine if the drift data are good or bad, so these data are flagged as 4, undetermined.
+ In general, if there is an extended period where the RPA is not functioning for whatever reason, then the drift meter data are not usable either.
+ On the other hand, if the RPA does not function for only one or a few four-second periods, then it is possible that this is just a glitch in the RPA and the drift meter data are still good.
+ The criteria for setting the quality flags on the RPA will be posted here later.
+ It is easy to dismiss a large segment of data where the drift meter flags are 2 (caution) or 3 (poor), but what do you do when you get a group of single data points flagged as 2 or 3 in the middle of data flagged as 1 (good)? The answer is use your judgment and see if the individual flows appear to match the good data or are they at variance with them.
+ The figure below shows the Vy flow on polar plots for F13 on 11 June 2000.
+ Looking at them you see that both patterns show the standard two-cell convection pattern (anti-sunward flow at the highest latitudes surrounded by sunward flows on both flanks).
+ In the northern hemisphere you see a scattering of yellow (2; caution) flows in the pattern.
+ However they occur singly and it is clear that the questionable flows fit exactly with the surrounding flows that are rated as good (1).
+ So you can safely ignore the caution flags for these data.
+ In the southern hemisphere the situation is a bit more complicated.
+ The southern hemisphere is close to winter solstice, so the densities are lower than the densities in the northern (summer) polar region.
+ There are a number of yellow (2; caution) and red (3; poor, don't use) flows around 80 degrees magnetic latitude on the dawnside of the dial.
+ This occurs where the spacecraft passes through a region where the density drops to ~10^3 ions/cc so our algorithm rates the quality as "caution".
+ However, looking at the plot here it seems that the flows appear reasonable and smoothly changing through this region, so I would personally judge these data to be good.
+ There are a few individual flows in this polar pass which are red (3; poor, don't use).
+ These are flows where the RPA analysis shows the percentage of O+ dropped below 75%.
+ However there is a lot of variation in the fractional amounts of O+ in this region and since these flows are consistent with the good flows which flank them, again I would ignore these flags and rate these flows as good.
+ On the duskside sunward flow flank at about 57 degrees magnetic latitude all the Vy flows are colored yellow (2; caution).
+ In this region the RPA has measured the fractional O+ to be between 78 and 84%, thus resulting in the caution flag for the IDM data.
+ However, looking at the plot shows that the Vy flow smoothly and slowly decays to about zero at ~45 degrees magnetic latitude.
+ for this case I ignore the flags and rate the drift meter data here as good.
+ This appears to be a case of a SAPS (Sub-Auroral Plasma Stream) where we frequently see a region of extended horizontal flow down past 50 degrees magnetic latitude.
+ The point here is that the current algorithm for creating the quality flags is very cautious.
+ We would rather err on the side of caution than let bad data be accidentally be flagged as good data.
+ Just to demonstrate the other extreme the plot below shows the Vy flow from F13 on 13 July 1995.
+ These passes occurred during solar minumum and, as above, near the summer solstice in the northern hemisphere.
+ Again the data from the northern pass (summer hemisphere) is rated good with a few isloated flows rated as caution or poor.
+ However the southern hemisphere (winter hemisphere) pass is terrible.
+ Only the two small regions around the auroral region on the dawn and dusk sides are rated as good.
+ I would not trust any of the data rated caution or poor in this pass.
+ One last question we are frequently asked: Why, when the light ions become more predominate in the plasma, does the drift meter react by reporting high velocities? In principle, it would seem that the only difference between an O+ plasma and a H+ plasma would be that the H+ ions would have a higher thermal spread.
+ But a larger thermal spread in the ions hitting the collectors in the drift meter would just be cancelled out on average and the true drift velocity based on the remaining O+ ions would still be measured.
+ So why do we see the negative horizontal velocities which increase as the percentage of H+ increases? We don¡¯t know, but we have a good guess.
+ The driftmeter was designed to operate in an environment where O+ was at least 90% of the composition of the plasma.
+ And ideally the thermal plasma plate would be out in front of the spacecraft, on the leading faceplate as it was on DE or ROCSAT or C/NOFS.
+ But since the SSIES package was placed on a preexisting design of the DMSP, we had to live with where it was put.
+ As you can see on the figure in the FAQ, the SSIES package hangs off the bottomside of the main body of the satellite facing into the direction of motion.
+ Because of the placement and the large size of the spacecraft (relative to the other spacecraft this package has flown on) we have to worry about spacecraft charging.
+ In general the DMSP main body exterior surfaces (nonconducting) charge to about -10 to -20 V relative to the surrounding plasma.
+ To measure the real ion velocities, the conducting plate surrounding the thermal SSIES instruments is charged positive relative to the spacecraft to hold all the instruments at same potential as the ambient plasma.
+ In principle this should keep all stray ions that would be deflected by the rest of the spacecraft, and end up coming into the driftmeter aperture at a high angle, thus messing up the measurement.
+ (The bias on the plate is continuously being corrected by a device called SENPOT to hold the plate at the plasma potential.
+) If the spacecraft is in a 100% O+ plasma, then the ions are too massive for any of them to scatter off the rest of the spacecraft and reach the driftmeter aperture.
+ But the H+ ions are light enough that they probably can scatter off of some part of the spacecraft and still enter the driftmeter aperture.
+ If the percentage of these scattered H+ ions is small, then most of the current being measured by the plates in the driftmeter come from the O+ and the signal is still good.
+ However, as the percentage of the H+ in the plasma increases, the more these scattered H+ ions affect the current and the more the calculated flow is contaminated by the light ions, resulting in the velocity measurements deviating further from the zero centerline.
+ When the plasma becomes 100% then essentially all the H+ ions entering the driftmeter are scattered ions rather than the incoming ram velocity ions and the result is the large drifts in the Vz data and the instrument being pegged at the negative extreme in the Vy data.
+ Unfortunately, unless the Air Force wishes to do a full up vacuum test of the plasma flows around a full-sized and charged spacecraft (very unlikely) we cannot prove this for certain.
+ But for the time being this is our best working hypothesis to explain these huge erroneous ion flows.
+ C 1D Parameters: KODS(0) 54 Magnetic local time hour KODS(1) 110 Geodetic altitude (height) km KODS(2) 160 Geodetic latitude of measurement deg KODS(3) 170 Geographic longitude of measurement deg KODS(4) 228 Magnetic latitude deg KODS(5) 518 Ion density (Ni) m-3 KODS(6) 550 Ion temperature (Ti) K KODS(7) 560 Electron temperature (Te) K KODS(8) 620 Composition - [O+]/Ne N/A KODS(9) 650 Composition - [HE+]/Ne N/A KODS(10) 660 Composition - [H+]/Ne N/A KODS(11) 789 Ion vel forward (+ is direction of the spacecraf m/s KODS(12) 790 Vertical ion velocity (pos = Down) m/s KODS(13) 791 Ion vel left (+ is horizontal to the left in the m/s KODS(14) 793 RPA qual flag - applies to Ti (1 = good; 2 = cau n/a KODS(15) 794 IDM qual flag - applies to hor and vert vel (1 = n/a KODS(16) 2326 Root mean square error of the RPA curve fit N/A KODS(17) 2328 Standard deviation of the 24 (nominally) measure N/A KODS(18) 2330 Standard deviation of the 24 (nominally) measure N/A CANALYST Marc Hairston CANDATE Thu May 31 02:17:46 2018 UT 

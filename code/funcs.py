@@ -43,8 +43,8 @@ def read_1s(dp,fn,dp_ut,fn_ut):
     fp = dp + fn
     nc_obj = Dataset(fp)
     data = pd.DataFrame()
-    nc_variables = ['timestamps','b_forward','b_perp','bd','diff_b_for','diff_b_perp','diff_bd']
-    col_names = ['timestamps','bx','by','bz','diff_bx','diff_by','diff_bz']
+    nc_variables = ['timestamps','b_forward','b_perp','bd','diff_b_for','diff_b_perp','diff_bd','ne']
+    col_names = ['timestamps','bx','by','bz','diff_bx','diff_by','diff_bz','ne']
     for v,cn in zip(nc_variables,col_names):
         data[cn] = nc_obj.variables[v][:]
     data['mbx'] = data['bx'] - data['diff_bx']
@@ -57,7 +57,7 @@ def read_1s(dp,fn,dp_ut,fn_ut):
     for i, t in enumerate(data['timestamps']):
         data['bool_to_ut'][i] = (t in for_bool)  # 创建新列然后根据索引重新对列元素赋值, 不能直接赋值
     data_1s_to_ut = pd.DataFrame()
-    for v in ['timestamps', 'bx', 'by', 'bz', 'diff_bx', 'diff_by', 'diff_bz','mbx', 'mby', 'mbz']:
+    for v in ['timestamps', 'bx', 'by', 'bz', 'diff_bx', 'diff_by', 'diff_bz','mbx', 'mby', 'mbz','ne']:
         data_1s_to_ut[v] = data[v][data['bool_to_ut']]
     data_1s_to_ut = data_1s_to_ut.reset_index(drop=True)
     return data,data_1s_to_ut
@@ -65,7 +65,7 @@ def read_1s(dp,fn,dp_ut,fn_ut):
 
 def need_data(d_ut_flag,d_1s_to_ut):
     needed_d = d_ut_flag.copy()
-    needed_d[['bx','by','bz','diff_bx','diff_by','diff_bz','mbx','mby','mbz']] = d_1s_to_ut[['bx','by','bz','diff_bx','diff_by','diff_bz','mbx','mby','mbz']]
+    needed_d[['bx','by','bz','diff_bx','diff_by','diff_bz','mbx','mby','mbz','ne']] = d_1s_to_ut[['bx','by','bz','diff_bx','diff_by','diff_bz','mbx','mby','mbz','ne']]
     # needed_d['time_intervals'] = np.zeros(len(needed_d))
     ls = np.zeros(len(needed_d))
     for i in range(0,len(needed_d)-1):
@@ -74,9 +74,9 @@ def need_data(d_ut_flag,d_1s_to_ut):
     needed_d = needed_d.interpolate()  # 少数离子数量密度数据为NaN，此处使用插值进行填充
     # 求 va
     (mu0,r_mo,r_mh,r_mhe,NA) = (1.25663706212e-6,15.999,1.008,4.0026,6.02214076e23)
-    nh = needed_d['ph+'] * needed_d['ni']
-    nhe = needed_d['phe+'] * needed_d['ni']
-    no = needed_d['po+'] * needed_d['ni']
+    nh = needed_d['ph+'] * needed_d['ne']
+    nhe = needed_d['phe+'] * needed_d['ne']
+    no = needed_d['po+'] * needed_d['ne']
     mo = r_mo / (1000 * NA)  # kg 国际标准单位
     mh = r_mh / (1000 * NA)
     mhe = r_mhe / (1000 * NA)
