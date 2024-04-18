@@ -99,3 +99,19 @@ fp_1s="dms_20110101_15s1.001.nc"
 d_ut,d_ut_flag = read_ut(dp_ut,fp_ut)
 d_1s,d_1s_to_ut = read_1s(dp_1s,fp_1s,dp_ut,fp_ut)
 need_d = need_data(d_ut_flag,d_1s_to_ut)
+
+# # 绘图
+# datetime_ = pd.to_datetime(seconds,unit='s',
+#                origin=pd.Timestamp('2011-09-09'))
+# data_dic = {'datetime':datetime_, 'm_bz':m_bz}
+# data_pd = pd.DataFrame(data_dic,index=datetime_)
+# data_pd['m_bz'].plot()
+#
+# # 绘制多个函数
+# data_ssm_bool[['m_bx','m_by','m_bz']].plot(rot=20,figsize=(15,5))
+#
+# 标记x轴坐标值
+# fig,ax = plt.subplots()
+# data_f15_ut.plot(ax=ax,x='timestamps',y='vz',rot=20)
+# for_xlabels = [d[-8:] for d in data_f15_ut['time'][[0,2698,5396,8094,10792]]]
+# ax.set_xticks(data_f15_ut['timestamps'][[0,2698,5396,8094,10792]],labels=for_xlabels)
