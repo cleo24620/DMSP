@@ -9,9 +9,11 @@ from bs4 import BeautifulSoup
 
 
 url_prefix = "http://madrigal.iggcas.ac.cn"  # 这个加上link构成可点击的web链接（链接可以是网页也可以是文件）
+# url_prefix = "https://spdf.gsfc.nasa.gov/pub/data/dmsp/dmspf18/ssies/ssies-3rl/thermal-plasma-cdf/2011/"  # for ssies3
 year_url = "http://madrigal.iggcas.ac.cn/ftp/fullname/leo/email/1392787871@qq.com/affiliation/None/kinst/8100/"  # 从年份页面开始选择
 
 
+# as for ssies3, the tag1 is 'td'
 def get_links(url,tag1='p',tag2='a'):
     """对于madrigal数据库的dmsp数据而言，所有的链接存在于网页中的<p>标签内的<a>标签。"""
     response = requests.get(url)
@@ -56,17 +58,26 @@ def download_file(url, directory, filename):
         print(f"下载失败：{e}")
 
 
-year_links = get_links(year_url)
-url = url_prefix + year_links[29]['link']  # 2011
-kind_of_data_links = get_links(url)
-url = url_prefix + kind_of_data_links[0]['link']  # 15s1
-format_links = get_links(url)
-url = url_prefix + format_links[1]['link']  # nc
-file_links = get_links(url)
+# 下载madrigal 1年的所选的文件类型的文件
+# year_links = get_links(year_url)
+# url = url_prefix + year_links[29]['link']  # 2011
+# kind_of_data_links = get_links(url)
+# url = url_prefix + kind_of_data_links[0]['link']  # 15s1
+# format_links = get_links(url)
+# url = url_prefix + format_links[1]['link']  # nc
+# file_links = get_links(url)
+#
+# dir = r"G:\0_postgraduate\DMSP\data\2011\15s1"
+# for dic in file_links:
+#     text = dic['text'].strip()  # 因为获取的text字符串前面有1个多余的空格
+#     link = dic['link']
+#     url = url_prefix + link
+#     download_file(url,directory=dir,filename=text)
 
-dir = r"G:\0_postgraduate\DMSP\data\2011\15s1"
-for dic in file_links:
-    text = dic['text'].strip()  # 因为获取的text字符串前面有1个多余的空格
-    link = dic['link']
-    url = url_prefix + link
-    download_file(url,directory=dir,filename=text)
+# ssies3
+# file_links = get_links(url)
+# for dic in file_links:
+#     text = dic['text'].strip()  # 去除文本前面的空格（有时需要处理后面的）
+#     link = dic['link']
+#     url = url_prefix + link
+#     download_file(url,directory=dir,filename=text)
