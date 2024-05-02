@@ -2,23 +2,26 @@
 # @Author  : cleo
 # @Software: PyCharm
 
-import numpy as np
-import matplotlib.pyplot as plt
-import pandas as pd
 import os
-import glob
+from datetime import datetime
+
 from netCDF4 import Dataset
-import time
-import re
-from scipy.fft import fft, fftfreq
 import spacepy.pycdf
-import matplotlib.dates as mdates
 import h5py
+import numpy as np
+import pandas as pd
+from scipy.fft import fft, fftfreq
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+import re
 
 
 
 class NcFile:
-    def __init__(self,file_path):
+    def __init__(self,file_path,s1_or_ut='s1'):
+        """
+        :param file_path: absolute path
+        """
         self.file_path = file_path
         self.directory = os.path.dirname(self.file_path)
         self.filename = os.path.basename(self.file_path)
@@ -31,10 +34,14 @@ class NcFile:
             self.year = match.group(0)
         else:
             print("No year found in the path.")
-        # 提取文件名中的日期
-        self.date = os.path.basename(self.filename).split('_')[1]
+        if s1_or_ut == 's1':
+            # 提取文件名中的日期
+            self.date = os.path.basename(self.filename).split('_')[1]
+        elif s1_or_ut == 'ut':
+            # 提取文件名中的日期
+            self.date = os.path.basename(self.filename).split('_')[2]
 
-    def return_data_details(self):
+    def return_data_details(self) ->dict:
         """数据变量名及其描述"""
         # 使用 Dataset 打开文件
         with Dataset(self.file_path, 'r') as nc:
@@ -52,22 +59,26 @@ class NcFile:
                 }
         return data_details
 
-    def return_original_data(self):
-        """返回原始数据。同时通过时间戳获取时间字符串，并将其作为DataFrame的第1列"""
+    def return_original_data(self) ->pd.DataFrame:
+        """这个NC文件的数据包含timestamps。返回原始数据。同时通过时间戳获取时间字符串，并将其作为DataFrame的第1列。"""
         nc_obj = Dataset(self.file_path)
         data = pd.DataFrame()
         # col name is the v_name
         for v in self.variables:
             data[v] = nc_obj.variables[v][:]
         # add time_str col, i.e. turning unix time to str time. And the time is UTC.
-        timestamps = data['timestamps']
+        try:
+            timestamps = data['timestamps']
+        except:
+            raise Exception("数据没有“timestapms”列")
         # time_str = [time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(t)) for t in timestamps]
         time_datetime = pd.to_datetime(timestamps,unit='s')
         data.insert(0, 'Epoch', time_datetime)
         return data
 
     def preprocess_data1(self):
-        """处理经度180度和-180度的突变；去掉经度的变化率非常大的部分。最后得到分割好的纬度、经度、磁扰。"""
+        """处理经度180度和-180度的突变；去掉经度的变化率非常大的部分。最后得到分割好的纬度、经度、磁扰。
+        这个函数可用于绘制MagneticDisturbanceFigure类"""
         latitude = self.original_data['gdlat']
         longitude = self.original_data['glon']
         # 磁场数据（T转nT）
@@ -123,7 +134,8 @@ class NcFile:
         return preprocessed_segments
 
     def preprocess_data2(self):
-        """将preprocess_data1()预处理的数据分成北半球和南半球2个数据且按照时间顺序，逐元素对应，先北后南。得到的数据可用于绘制沿轨迹磁扰图像（每轨）。"""
+        """将preprocess_data1()预处理的数据分成北半球和南半球2个数据且按照时间顺序，逐元素对应，先北后南。得到的数据可用于绘制沿轨迹磁扰图像
+        （每轨）。这个函数可用于绘制MagneticDisturbanceFigure类。"""
         preprocessed_segments = self.preprocess_data1()
         merge_segs = []
         latitude = []
@@ -158,51 +170,134 @@ class NcFile:
 
 
 class CDFFile:
-    def __init__(self,file_path,is_ssies3=True):
+    def __init__(self,file_path,is_ssies3=False,is_drop=True,is_ssm=False):
+        """
+        :param file_path: absolute path
+        """
         self.file_path = file_path
         self.directory = os.path.dirname(self.file_path)
         self.filename = os.path.basename(self.file_path)
         self.cdf = spacepy.pycdf.CDF(self.file_path)
-        if is_ssies3:
-            disgard_vars = ['corrpaqual', 'ebm', 'rpainfo', 'nmbot', 'rpaground', 'pot', 'corvelx', 'corvely',
-                            'corvelz']
-            self.data = self.get_cdf_data(disgard_vars=disgard_vars)
-        else:
-            raise Exception("请以列表形式输入不需要的变量名")
+        self.is_ssies3 = is_ssies3
+        self.is_drop = is_drop
+        self.is_ssm = is_ssm
+        # match = re.search(r"(\d{12})",self.filename)
+        # if match:
+        #     self.start_time_str = match.group(1)  # 提取匹配的部分
+        #     self.start_time_datetime = pd.to_datetime(self.start_time_str)
+        # else:
+        #     print("cannot find timestamp in filename.")
 
-    def get_cdf_data(self, disgard_vars):
-        """
-        :param disgard_vars: 不需要的变量名，由变量名字符串组成的列表
-        对于SSIES-3而言，disgard_vars = ['corrpaqual','ebm','rpainfo','nmbot','rpaground','pot','corvelx','corvely','corvelz']
-        :return: DataFrame
-        """
+    def ssies3_data(self, is_drop=True):
+        cdf = self.cdf
         data = pd.DataFrame()
-        with self.cdf as cdf:
-            var_names = cdf.keys()
+        var_names = cdf.keys()
+        disgard_vars = ['corrpaqual', 'ebm', 'rpainfo', 'nmbot', 'rpaground', 'pot', 'corvelx', 'corvely',
+                        'corvelz']
+        if is_drop:
             for var_name in var_names:
                 if var_name in disgard_vars:
                     continue
                 var = cdf[var_name][...]
                 data[var_name] = var
+        else:
+            for var_name in var_names:
+                var = cdf[var_name][...]
+                data[var_name] = var
         data['timestamps'] = data['Epoch'].astype('int64') // 1e9
         return data
 
-    def vxraw_quality_control(self):
-        vxqual = self.data['vxqual']
-        vxraw = self.data['vxraw']
+    def ssm_data(self):
+        # 实例化cdf文件
+        cdf = self.cdf
+        # 获取符合加载条件的变量名和对应形状
+        var_shape = {}
+        for var in cdf:
+            if len(cdf[var].shape) == 1 and cdf[var].shape[0] == 3:
+                continue
+            var_shape[var] = cdf[var].shape
+        # 加载数据
+        data = pd.DataFrame()
+        for var, shape in var_shape.items():
+            if (len(shape) == 2) and (shape[1] == 3):
+                data[f'{var}_x'] = cdf[var][...][:, 0]
+                data[f'{var}_y'] = cdf[var][...][:, 1]
+                data[f'{var}_z'] = cdf[var][...][:, 2]
+            else:
+                data[var] = cdf[var][...]
+        data['timestamps'] = data['Epoch'].astype('int64') // 1e9
+        return data
+
+    def vx_set_nan(self,is_raw=False) ->pd.Series:
+        """质量控制和缺失时刻的数据点填充为nan"""
+        data = self.ssies3_data()
+        vxqual = data['vxqual']
+        if is_raw:
+            vx = data['vxraw']
+            vx_set_nan = data['vxraw'].copy()
+        else:
+            vx = data['vx']
+            vx_set_nan = data['vx'].copy()
         filter = (((vxqual == 3) | (vxqual == 4) | (vxqual == 5)) |
-                     ((vxraw > 2000) | (vxraw < -2000)))
+                     ((vx > 2000) | (vx < -2000)))
         # 注意要用括号将条件括起来，不然会报错：
         # ValueError: The truth value of a Series is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
-        vxraw_set_nan = self.data['vxraw'].copy()
-        vxraw_set_nan[filter] = np.nan
-        return vxraw_set_nan
+        vx_set_nan[filter] = np.nan
+        df_for_empty_ts_set_nan = pd.DataFrame()
+        df_for_empty_ts_set_nan['timestamps'] = data['timestamps'].copy()
+        df_for_empty_ts_set_nan['vx'] = vx_set_nan
+        differences = np.diff(df_for_empty_ts_set_nan['timestamps'].to_numpy())
+        if np.any(differences != 1):
+            df_for_empty_ts_set_nan = return_full_time_df(df_for_empty_ts_set_nan)
+        df_for_empty_ts_set_nan['Epoch'] = pd.to_datetime(df_for_empty_ts_set_nan['timestamps'],unit='s')
+        return df_for_empty_ts_set_nan
+
+    def v_yz_set_nan(self,v_str) ->pd.Series:
+        """
+        质量控制和缺失时刻的数据点填充为nan.
+        For vy and vz, the quality flag is same idm flag. (I'm not sure that the loss time data is the same for the
+        2 variables)
+        Note: the quality is level 2 product, before use it in search, I should check the data.
+        Reference the ssies3 flag doc.
+        """
+        data = self.ssies3_data()
+        if not all(data['vyqual']==data['vzqual']):
+            raise Exception("vy quality not equal vz quality!!! Please check it.")
+        vqual = data['vyqual']
+        if v_str == 'vy':
+            v = data['vy']
+            v_set_nan = data['vy'].copy()
+        else:
+            v = data['vz']
+            v_set_nan = data['vz'].copy()
+        # 注意要用括号将条件括起来，不然会报错：
+        # filter = ~ (((vqual == 1) | (vqual == 2)) & ((v < 2000) & (v > -2000)))
+        filter = ~ ((vqual == 1) & (v < 2000) & (v > -2000))
+        # ValueError: The truth value of a Series is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+        v_set_nan[filter] = np.nan
+        df_for_empty_ts_set_nan = pd.DataFrame()
+        df_for_empty_ts_set_nan['timestamps'] = data['timestamps'].copy()
+        if v_str == 'vy':
+            df_for_empty_ts_set_nan['vy'] = v_set_nan
+        else:
+            df_for_empty_ts_set_nan['vz'] = v_set_nan
+        # 将数据缺失时刻的值设置为Nan
+        differences = np.diff(df_for_empty_ts_set_nan['timestamps'].to_numpy())
+        if np.any(differences != 1):
+            df_for_empty_ts_set_nan = return_full_time_df(df_for_empty_ts_set_nan)
+        # 添加Epoch列
+        df_for_empty_ts_set_nan['Epoch'] = pd.to_datetime(df_for_empty_ts_set_nan['timestamps'],unit='s')
+
+        return df_for_empty_ts_set_nan
 
     def return_vx_parts(self, max_nan_len=60):
-        """单轨101min，连续nan最大值为101min的1/10，设置为60s，对应max_nan_len=60"""
-        vxraw_set_nan = self.vxraw_quality_control()
+        """
+        单轨101min，连续nan最大值为101min的1/10，设置为60s，对应max_nan_len=60
+        :return: 列表格式，元素也是列表，由连续索引数据组成
+        """
+        vx_set_nan = self.vx_set_nan()  # index是连续的
         # 找出所有NaN的位置
-        is_nan = vxraw_set_nan.isna()
+        is_nan = vx_set_nan.isna()
         # 通过cumsum()创建分组，连续的NaN会有相同的组号
         grouped = is_nan.ne(is_nan.shift()).cumsum()
         # 统计每组NaN的数量
@@ -212,7 +307,7 @@ class CDFFile:
         # 标记需要保留的数据
         mask = ~grouped.isin(large_nan_groups) | ~is_nan
         # 应用mask，删除连续NaN超过10的部分
-        filtered_series = vxraw_set_nan[mask]
+        filtered_series = vx_set_nan[mask]
         # 分割
         # 计算索引的不连续处
         diffs = filtered_series.index.to_series().diff() > 1
@@ -236,6 +331,7 @@ class CDFFile:
         return start_idx,end_idx
 
 class MagneticDisturbanceFigure(NcFile):
+    """NcFile实例化时传入的默认时s1类型数据"""
     def draw_1d(self):
         """所有轨迹的磁扰,分成南北半球"""
         preprocessed_segments = self.preprocess_data1()
@@ -521,35 +617,51 @@ class MagneticDisturbanceFigure(NcFile):
 
 
 class BandPassFilter:
-    def __init__(self,variable_data,time_x):
+    def __init__(self,variable_data,time_x:datetime,start_time_for_title: datetime | str):
         self.variable_data = variable_data
         self.time_x = time_x
         self.t = self.variable_data.index.to_numpy()
         self.signal = self.variable_data.values
         self.signal_fft = fft(self.signal)
         self.sample_freq = fftfreq(self.signal.size, d=self.t[1] - self.t[0])
+        self.start_time_for_title = start_time_for_title
+        # 将频率和振幅数组按频率升序排列
+        indices = np.argsort(self.sample_freq)  # 获取排序后的索引数组
+        sorted_freqs = self.sample_freq[indices]
+        sorted_fft = self.signal_fft[indices]
+        # 取绝对值计算振幅（模长）
+        sorted_magnitudes = np.abs(sorted_fft)
+        # 过滤出正频率部分用于绘制（通常我们只关心正频率部分）
+        positive_freqs = sorted_freqs > 0
+        self.final_freqs = sorted_freqs[positive_freqs]
+        self.final_magnitudes = sorted_magnitudes[positive_freqs]
+
+
     def draw_original_signal(self):
-        t = self.t
-        signal = self.signal
         # 绘制原始信号
         fig,ax = plt.subplots(figsize=(20, 5))
         ax.plot(self.time_x,self.signal)
-        ax.xaxis.set_major_locator(mdates.MinuteLocator(byminute=[0,15,30,45]))  # 只在12点和13点显示
+        ax.xaxis.set_major_locator(mdates.MinuteLocator(byminute=[0,15,30,45]))  # 只在某些时刻显示刻度
         ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))  # 格式化显示格式
         ax.set_xlabel("time (s)")
         ax.set_ylabel(f"{self.variable_data.name}")
-        ax.set_title(f'original {self.variable_data.name}')
+        ax.set_title(f'original {self.variable_data.name} start at {self.start_time_for_title}')
         # plt.xlabel("time (s)")
         # plt.ylabel(f"{self.variable_data.name}")
         # plt.title(f'original {self.variable_data.name}')
         return fig
-    def draw_frequency_amplitude(self):
+    def draw_frequency_amplitude(self,is_log=False):
         # 绘制傅里叶变换结果的幅度谱（双边谱）
         fig = plt.figure(figsize=(20, 5))
-        plt.plot(self.sample_freq, np.abs(self.signal_fft))
+        if is_log:
+            final_magnitudes_log = np.log(self.final_magnitudes)
+            plt.plot(self.final_freqs, final_magnitudes_log)
+            plt.ylabel('Amplitude (lg)')
+        else:
+            plt.plot(self.final_freqs, self.final_magnitudes)
+            plt.ylabel('Amplitude')
         plt.xlabel('Frequency (Hz)')
-        plt.ylabel('Amplitude')
-        plt.title('Spectrogram after Fourier Transform')
+        plt.title(f'Spectrogram after Fourier Transform start at {self.start_time_for_title}')
         return fig
 
     def signal_after_bandpass_filter(self, epoch1, epoch2, is_draw=False):
@@ -565,7 +677,8 @@ class BandPassFilter:
             ax.plot(self.time_x, filtered_signal)
             ax.set_xlabel('Time (seconds)')
             ax.set_ylabel(f'{self.variable_data.name}')
-            ax.set_title(f'{self.variable_data.name} after bandpass filter ({epoch1}s to {epoch2}s)')
+            ax.set_title(f'{self.variable_data.name} after bandpass filter ({epoch1}s to {epoch2}s) '
+                         f'start at {self.start_time_for_title}')
             return fig, filtered_signal
         return filtered_signal
 
@@ -583,31 +696,16 @@ def return_suffix_file_paths(directory, suffix='.cdf'):
     return file_paths
 
 
-def return_full_time_df(df):
-    """时间戳列名为timestamps，单位为s（分辨率为1s）"""
-    # 将Unix时间戳转换为datetime
-    df['timestamps'] = pd.to_datetime(df['timestamps'], unit='s')
-    # 创建完整的时间序列
-    min_time = df['timestamps'].min()
-    max_time = df['timestamps'].max()
-    all_times = pd.date_range(start=min_time, end=max_time, freq='S')
-    full_df = pd.DataFrame(all_times, columns=['timestamps'])
-    full_df = full_df.merge(df, on='timestamps', how='left')
-    # 将datetime转换回Unix时间戳（秒）
-    full_df['timestamps'] = full_df['timestamps'].astype(np.int64) // 10 ** 9
-    full_df['Epoch'] = pd.to_datetime(full_df['timestamps'],unit='s')
-    return full_df
-
-
-def walen_test_s1_sseis3(data_s1, data_ssies3, start_idx, end_idx, vxraw_set_nan, freq='S'):
+def walen_test_s1_sseis3(data_s1:pd.DataFrame, data_ssies3:pd.DataFrame,
+                         start_idx:int, end_idx:int, vx_set_nan, freq='S'):
     data_ssies3_clipped = pd.DataFrame()
     timestamps_ssies3 = data_ssies3['timestamps'].copy()
     timestamps_ssies3_clipped = timestamps_ssies3.iloc[start_idx:end_idx].reset_index(drop=True)
     start_timestamp = timestamps_ssies3_clipped.iloc[0]
     end_timestamp = timestamps_ssies3_clipped.iloc[-1]
-    vxraw_ssies3_clipped = vxraw_set_nan.iloc[start_idx:end_idx].reset_index(drop=True)
+    vx_ssies3_clipped = vx_set_nan.iloc[start_idx:end_idx].reset_index(drop=True)
     data_ssies3_clipped['timestamps'] = timestamps_ssies3_clipped
-    data_ssies3_clipped['vx'] = vxraw_ssies3_clipped  # 还没处理nan
+    data_ssies3_clipped['vx'] = vx_ssies3_clipped  # 还没处理nan
     differences = np.diff(timestamps_ssies3_clipped.to_numpy())
     if np.any(differences != 1):
         data_ssies3_clipped = return_full_time_df(data_ssies3_clipped)
@@ -635,12 +733,27 @@ def walen_test_s1_sseis3(data_s1, data_ssies3, start_idx, end_idx, vxraw_set_nan
     differences = np.diff(timestamps_s1_clipped.to_numpy())
     if np.any(differences!=1):
         data_s1_select_v = return_full_time_df(data_s1_select_v)
-
     # 合并
     if np.all(data_ssies3_clipped['timestamps']==data_s1_select_v['timestamps']):
         data_for_walen = pd.concat([data_ssies3_clipped[['Epoch','timestamps','vx']],data_s1_select_v['diff_bx']],axis=1)
 
     return data_for_walen
+
+
+def return_full_time_df(df):
+    """时间戳列名为timestamps，单位为s（分辨率为1s）"""
+    # 将Unix时间戳转换为datetime
+    df['timestamps'] = pd.to_datetime(df['timestamps'], unit='s')
+    # 创建完整的时间序列
+    min_time = df['timestamps'].min()
+    max_time = df['timestamps'].max()
+    all_times = pd.date_range(start=min_time, end=max_time, freq='S')
+    full_df = pd.DataFrame(all_times, columns=['timestamps'])
+    full_df = full_df.merge(df, on='timestamps', how='left')
+    # 将datetime转换回Unix时间戳（秒）
+    full_df['timestamps'] = full_df['timestamps'].astype(np.int64) // 10 ** 9
+    full_df['Epoch'] = pd.to_datetime(full_df['timestamps'],unit='s')
+    return full_df
 
 
 def read_csv(file_path,comment='#'):
@@ -682,77 +795,10 @@ def read_hdf5(file_path):
 def read_hdf4(file_path):
     return
 
-# def freq_amp(data, is_draw=False):
-#     t = data.index.to_numpy()
-#     signal = data.values
-#     # 进行傅里叶变换
-#     signal_fft = fft(signal)
-#     # 计算对应的频率
-#     sample_freq = fftfreq(signal.size, d=t[1] - t[0])
-#     if is_draw:
-#         # 绘制傅里叶变换结果的幅度谱（双边谱）
-#         plt.figure(figsize=(20, 5))
-#         plt.plot(sample_freq, np.abs(signal_fft))
-#         plt.title('Spectrogram after Fourier Transform')
-#         plt.xlabel('Frequency (Hz)')
-#         plt.ylabel('Amplitude')
-#     return sample_freq, signal_fft
-#
-#
-# def signal_after_bandpass_filter(data, epoch1, epoch2d, is_draw=False):
-#         t = data.index.to_numpy()
-#         signal = data.values
-#         # 进行傅里叶变换
-#         signal_fft = fft(signal)
-#         # 计算对应的频率
-#         sample_freq = fftfreq(signal.size, d=t[1] - t[0])
-#         # 选取不同频率段，创建一个带通滤波器
-#         bandpass_filter = (sample_freq > 1/epoch2) & (sample_freq < 1/epoch1)
-#         filtered_signal_fft = signal_fft.copy()
-#         filtered_signal_fft[~bandpass_filter] = 0
-#         # 进行傅里叶反变换，得到过滤后的信号
-#         filtered_signal = np.real(np.fft.ifft(filtered_signal_fft))
-#         if is_draw:
-#             # 绘制过滤后的信号
-#             plt.figure(figsize=(20, 5))
-#             plt.plot(t, filtered_signal)
-#             plt.title(f'Signal after bandpass filter ({epoch1}s to {epoch2}s)')
-#             plt.xlabel('Time (seconds)')
-#             plt.ylabel(f'{data.name}')
-#             plt.show()
-#         return t,filtered_signal
-
-
-# # s1 data
-# path_s1 = r"G:\0_postgraduate\DMSP\data\2011\15s1\dms_20110101_15s1.001.nc"
-# file_s1 = NcFile(path_s1)
-# # ut data(SSIES-2)
-# path_ut = r"G:\0_postgraduate\DMSP\data\2011\ut\dms_ut_20110101_15.002.nc"
-# file_ut = NcFile(path_ut)
-# SSIES-3
-# disgard_vars = ['corrpaqual','ebm','rpainfo','nmbot','rpaground','pot','corvelx','corvely','corvelz']
-# data_ssies3 = get_cdf_data(r"G:\0_postgraduate\DMSP\data\cdf\dmsp-f18_ssies-3_thermal-plasma_201101010021_v01.cdf",
-#                            disgard_vars)
 
 ### code back
-###
-# Transform类的用法
-# file_path = r"G:\0_postgraduate\DMSP\data\2011\15s1\dms_20110101_15s1.001.nc"
-# transform = Transform(file_path)
-# t,filtered_signal = transform.signal_after_bandpass_filter('vert_ion_v',is_b=False,epoch1=1000,epoch2=1100,is_draw=True)
-###
 # pd.datetime 转换为 unix timestamps (s)
 # data_ssies3['Epoch'].astype('int64') // 1e9
+# unix timestamps (s) 转换为 pd.datetime
+# pd.to_datetime(timestamps)
 ###
-# 一些统计数据的方法
-# (data_ssies3['vxraw']==0).sum()
-# (data_ssies3['vxqual']==5).sum()/data_ssies3.shape[0]
-# nan_indices= vxraw[vxraw.isna()].index
-###
-# 子图绘制
-# subplots()
-# gs = gridspec.GridSpec(5,2)  # 更灵活
-### 时间绘图
-# 设置日期定位器只在特定的时间显示刻度
-# ax1.xaxis.set_major_locator(mdates.MinuteLocator(byminute=[0,15,30,45]))  # 只在12点和13点显示
-# ax1.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))  # 格式化显示格式
