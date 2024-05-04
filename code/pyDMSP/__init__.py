@@ -170,7 +170,7 @@ class NcFile:
 
 
 class CDFFile:
-    def __init__(self,file_path,is_ssies3=False,is_drop=True,is_ssm=False):
+    def __init__(self,file_path,is_ssies3=False,is_ssm=False):
         """
         :param file_path: absolute path
         """
@@ -179,7 +179,6 @@ class CDFFile:
         self.filename = os.path.basename(self.file_path)
         self.cdf = spacepy.pycdf.CDF(self.file_path)
         self.is_ssies3 = is_ssies3
-        self.is_drop = is_drop
         self.is_ssm = is_ssm
         # match = re.search(r"(\d{12})",self.filename)
         # if match:
@@ -188,48 +187,67 @@ class CDFFile:
         # else:
         #     print("cannot find timestamp in filename.")
 
-    def ssies3_data(self, is_drop=True):
-        cdf = self.cdf
+    def ssies3_data(self, is_drop=False):
+        """
+        read cdaweb ssies3 data. Don't guarantee can read ssies3 data from other resource.
+        all variables data of ssies3 data from cdaweb are one dimension and their lengths are same.
+        :param is_drop:
+        :return:
+        """
         data = pd.DataFrame()
-        var_names = cdf.keys()
-        disgard_vars = ['corrpaqual', 'ebm', 'rpainfo', 'nmbot', 'rpaground', 'pot', 'corvelx', 'corvely',
-                        'corvelz']
+        # get cdf variable names
+        var_names = self.cdf.keys()
+        # preview the variables. get the data without drop variables or with all variables.
         if is_drop:
+            disgard_vars = ['corrpaqual','ebm','rpainfo','nmbot','rpaground','pot','corvelx','corvely','corvelz']
             for var_name in var_names:
                 if var_name in disgard_vars:
                     continue
-                var = cdf[var_name][...]
+                var = self.cdf[var_name][...]
                 data[var_name] = var
         else:
             for var_name in var_names:
-                var = cdf[var_name][...]
+                var = self.cdf[var_name][...]
                 data[var_name] = var
+        # add 'timestamps' column to data, note that the unit of timestamps is second, not n second. The same unit
+        # attention is when I want to change unix timestamp to pandas datetime object, the default unit is n second.
         data['timestamps'] = data['Epoch'].astype('int64') // 1e9
+
         return data
 
     def ssm_data(self):
-        # 实例化cdf文件
-        cdf = self.cdf
-        # 获取符合加载条件的变量名和对应形状
+        """
+        read cdaweb ssies3 data. Don't guarantee can read ssies3 data from other resource.
+        ssm data is different from ssies3 data.
+        some variable data have 3 dim. the label variable data have 1 dim but their length are 3.
+        If I want to get more information,
+        :return:
+        """
+        # remove label variable data, get the name and shape of the rest variable data.
         var_shape = {}
-        for var in cdf:
-            if len(cdf[var].shape) == 1 and cdf[var].shape[0] == 3:
+        for var in self.cdf:
+            if len(self.cdf[var].shape) == 1 and self.cdf[var].shape[0] == 3:
                 continue
-            var_shape[var] = cdf[var].shape
+            var_shape[var] = self.cdf[var].shape
         # 加载数据
         data = pd.DataFrame()
         for var, shape in var_shape.items():
+            # add if statement to resolve the 3 dim variable data to x,y,z coordinate.
             if (len(shape) == 2) and (shape[1] == 3):
-                data[f'{var}_x'] = cdf[var][...][:, 0]
-                data[f'{var}_y'] = cdf[var][...][:, 1]
-                data[f'{var}_z'] = cdf[var][...][:, 2]
+                data[f'{var}_x'] = self.cdf[var][...][:, 0]
+                data[f'{var}_y'] = self.cdf[var][...][:, 1]
+                data[f'{var}_z'] = self.cdf[var][...][:, 2]
             else:
-                data[var] = cdf[var][...]
+                data[var] = self.cdf[var][...]
+        # add 'timestamps' column to data
         data['timestamps'] = data['Epoch'].astype('int64') // 1e9
         return data
 
-    def vx_set_nan(self,is_raw=False) ->pd.Series:
-        """质量控制和缺失时刻的数据点填充为nan"""
+    def vx_set_nan(self,is_raw=False) ->pd.DataFrame:
+        """
+        质量控制和缺失时刻的数据点填充为nan
+        """
+        # prepare the data needed to be processed.
         data = self.ssies3_data()
         vxqual = data['vxqual']
         if is_raw:
@@ -238,21 +256,24 @@ class CDFFile:
         else:
             vx = data['vx']
             vx_set_nan = data['vx'].copy()
-        filter = (((vxqual == 3) | (vxqual == 4) | (vxqual == 5)) |
-                     ((vx > 2000) | (vx < -2000)))
+        # find the time of data needed to be set nan.
+        # for my fft analysis, I need the complete time series data without nan. So in the end, I need to process these
+        # nan.
         # 注意要用括号将条件括起来，不然会报错：
         # ValueError: The truth value of a Series is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+        filter = (~(vxqual == 1) | ((vx > 2000) | (vx < -2000)))
         vx_set_nan[filter] = np.nan
-        df_for_empty_ts_set_nan = pd.DataFrame()
-        df_for_empty_ts_set_nan['timestamps'] = data['timestamps'].copy()
-        df_for_empty_ts_set_nan['vx'] = vx_set_nan
-        differences = np.diff(df_for_empty_ts_set_nan['timestamps'].to_numpy())
-        if np.any(differences != 1):
-            df_for_empty_ts_set_nan = return_full_time_df(df_for_empty_ts_set_nan)
-        df_for_empty_ts_set_nan['Epoch'] = pd.to_datetime(df_for_empty_ts_set_nan['timestamps'],unit='s')
-        return df_for_empty_ts_set_nan
+        vx_df = pd.DataFrame()
+        vx_df['timestamps'] = data['timestamps'].copy()
+        vx_df['vx'] = vx_set_nan
+        # lost time data set nan
+        differences = np.diff(vx_df['timestamps'].to_numpy())
+        if np.any(differences != 1):  # note the time resolution
+            vx_df = return_full_time_df(vx_df)
+        vx_df['Epoch'] = pd.to_datetime(vx_df['timestamps'],unit='s')
+        return vx_df
 
-    def v_yz_set_nan(self,v_str) ->pd.Series:
+    def v_yz_set_nan(self,v_str) ->pd.DataFrame:
         """
         质量控制和缺失时刻的数据点填充为nan.
         For vy and vz, the quality flag is same idm flag. (I'm not sure that the loss time data is the same for the
@@ -270,25 +291,21 @@ class CDFFile:
         else:
             v = data['vz']
             v_set_nan = data['vz'].copy()
-        # 注意要用括号将条件括起来，不然会报错：
-        # filter = ~ (((vqual == 1) | (vqual == 2)) & ((v < 2000) & (v > -2000)))
-        filter = ~ ((vqual == 1) & (v < 2000) & (v > -2000))
-        # ValueError: The truth value of a Series is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+        filter = ~((vqual == 1) & (v < 2000) & (v > -2000))
         v_set_nan[filter] = np.nan
-        df_for_empty_ts_set_nan = pd.DataFrame()
-        df_for_empty_ts_set_nan['timestamps'] = data['timestamps'].copy()
+        v_df = pd.DataFrame()
+        v_df['timestamps'] = data['timestamps'].copy()
         if v_str == 'vy':
-            df_for_empty_ts_set_nan['vy'] = v_set_nan
+            v_df['vy'] = v_set_nan
         else:
-            df_for_empty_ts_set_nan['vz'] = v_set_nan
+            v_df['vz'] = v_set_nan
         # 将数据缺失时刻的值设置为Nan
-        differences = np.diff(df_for_empty_ts_set_nan['timestamps'].to_numpy())
+        differences = np.diff(v_df['timestamps'].to_numpy())
         if np.any(differences != 1):
-            df_for_empty_ts_set_nan = return_full_time_df(df_for_empty_ts_set_nan)
+            v_df = return_full_time_df(v_df)
         # 添加Epoch列
-        df_for_empty_ts_set_nan['Epoch'] = pd.to_datetime(df_for_empty_ts_set_nan['timestamps'],unit='s')
-
-        return df_for_empty_ts_set_nan
+        v_df['Epoch'] = pd.to_datetime(v_df['timestamps'],unit='s')
+        return v_df
 
     def return_vx_parts(self, max_nan_len=60):
         """
@@ -324,6 +341,10 @@ class CDFFile:
         return parts
 
     def return_start_end_idx(self):
+        """
+        for data parts
+        :return:
+        """
         parts = self.return_vx_parts()
         longest_part = max(parts, key=len)
         start_idx = longest_part.index[0]
@@ -684,7 +705,7 @@ class BandPassFilter:
 
 
 def return_suffix_file_paths(directory, suffix='.cdf'):
-    """ 返回指定目录下所有 suffix=.cdf 文件的完整路径列表。 directory为绝对路径"""
+    """ 返回指定目录下所有 assigned suffix 文件的完整路径列表。 directory为绝对路径"""
     file_paths = []
     # 遍历指定目录
     for root, dirs, files in os.walk(directory):
@@ -698,6 +719,16 @@ def return_suffix_file_paths(directory, suffix='.cdf'):
 
 def walen_test_s1_sseis3(data_s1:pd.DataFrame, data_ssies3:pd.DataFrame,
                          start_idx:int, end_idx:int, vx_set_nan, freq='S'):
+    """
+    for ssies2 data from Madrigal database named "ut...".
+    :param data_s1:
+    :param data_ssies3:
+    :param start_idx:
+    :param end_idx:
+    :param vx_set_nan:
+    :param freq:
+    :return:
+    """
     data_ssies3_clipped = pd.DataFrame()
     timestamps_ssies3 = data_ssies3['timestamps'].copy()
     timestamps_ssies3_clipped = timestamps_ssies3.iloc[start_idx:end_idx].reset_index(drop=True)
