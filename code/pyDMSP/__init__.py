@@ -4,6 +4,7 @@
 
 import os
 from datetime import datetime
+from typing import Optional
 
 from netCDF4 import Dataset
 import spacepy.pycdf
@@ -170,7 +171,7 @@ class NcFile:
 
 
 class CDFFile:
-    def __init__(self,file_path,is_ssies3=False,is_ssm=False):
+    def __init__(self,file_path,is_f17:bool,is_ssies3=False,is_ssm=False):
         """
         :param file_path: absolute path
         """
@@ -178,6 +179,7 @@ class CDFFile:
         self.directory = os.path.dirname(self.file_path)
         self.filename = os.path.basename(self.file_path)
         self.cdf = spacepy.pycdf.CDF(self.file_path)
+        self.is_f17 = is_f17
         self.is_ssies3 = is_ssies3
         self.is_ssm = is_ssm
         # match = re.search(r"(\d{12})",self.filename)
@@ -291,7 +293,10 @@ class CDFFile:
         else:
             v = data['vz']
             v_set_nan = data['vz'].copy()
-        filter = ~((vqual == 1) & (v < 2000) & (v > -2000))
+        if self.is_f17:
+            filter = ~(((vqual == 1) | (vqual == 6)) & (v < 2000) & (v > -2000))
+        else:
+            filter = ~((vqual == 1) & (v < 2000) & (v > -2000))
         v_set_nan[filter] = np.nan
         v_df = pd.DataFrame()
         v_df['timestamps'] = data['timestamps'].copy()
@@ -825,6 +830,146 @@ def read_hdf5(file_path):
 
 def read_hdf4(file_path):
     return
+
+
+def data_for_draw(ssies3_fp,ssm_fp,is_f17):
+    """
+    prepare the data for draw.
+    note: for ssies3, I need the velocity. If I need other variables, I need to refactor.
+    :param ssies3_fp:
+    :param ssm_fp:
+    :return:
+    """
+    ssies3 = CDFFile(ssies3_fp,is_f17=is_f17)
+    ssm = CDFFile(ssm_fp,is_f17=is_f17)
+    # data
+    ssies3_data = ssies3.ssies3_data()
+    ssm_data = ssm.ssm_data()
+    # v set nan
+    vx_set_nan = ssies3.vx_set_nan()
+    vy_set_nan = ssies3.v_yz_set_nan(v_str='vy')
+    vz_set_nan = ssies3.v_yz_set_nan(v_str='vz')
+    # change the coordinate system of v
+    data_dic = {'Epoch': vx_set_nan['Epoch'], 'V_SC_x': -vz_set_nan['vz'], 'V_SC_y': vx_set_nan['vx'],
+                'V_SC_z': -vy_set_nan['vy']}
+    ssies3_data_SC = pd.DataFrame(data_dic)
+    # ssm clip
+    st = ssies3_data['timestamps'].iloc[0]
+    et = ssies3_data['timestamps'].iloc[-1]
+    s_idx = np.where(ssm_data['timestamps'] == st)
+    e_idx = np.where(ssm_data['timestamps'] == et)
+    ssm_data_clip = ssm_data.iloc[s_idx[0][0]:e_idx[0][0] + 1].reset_index(drop=True)
+
+    return ssies3_data_SC, ssm_data_clip
+
+
+def draw_ssies3_ssm(ssies3_data:pd.DataFrame, ssm_data:pd.DataFrame, ssies3_v_str:str, ssm_v_str:str, ssies3_unit:str,
+                    ssm_unit:str, dhm:str, title_part:str,satellite:str, is_save=False,
+                    fig_save_path:Optional[str]=None):
+    """
+    draw one orbit, different physical parameters, for example, plasma velocity and delta magnetic field or observed
+    magnetic field and so on.
+    the same coordinate system (for example: SC, GEO...).
+    :param ssm_unit: the ssm physical parameter's unit
+    :param ssies3_unit: the ssies3 physical parameter's unit
+    :param ssm_v_str: the ssm physical parameter
+    :param ssies3_v_str: the ssies3 physical parameter
+    :param ssies3_data: the ssies3 data in the afssigned coordinate system, including 'Epoch',xyz components.
+    :param ssm_data: the clipped ssm data, including 'Epoch',xyz components.
+    :param dhm: the data start day hour minute.
+    :param title_part:
+    :return:
+    """
+    fig, axs = plt.subplots(3, 1, figsize=(20, 10 * 3))
+    ax1 = axs[0]
+    ax2 = axs[1]
+    ax3 = axs[2]
+
+    # fig title
+    fig.suptitle(f'f{satellite} {dhm}: {title_part}')
+
+    # x
+    ax1_t = ax1.twinx()  # 创建共享x轴的第二个y轴
+    # plot
+    ax1.plot(ssies3_data['Epoch'], ssies3_data[f'{ssies3_v_str}_x'], 'tab:blue')
+    ax1_t.plot(ssm_data['Epoch'], ssm_data[f'{ssm_v_str}_x'], 'tab:orange')
+    # datetime locator
+    # because ax1_t share the ax1, so the locator just used in ax1.
+    ax1.xaxis.set_major_locator(mdates.MinuteLocator(byminute=[0, 15, 30, 45]))  # 只在某些时刻显示刻度
+    ax1.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))  # 格式化显示格式
+    # 在y=0处添加一条红色虚线
+    ax1.axhline(y=0, color='black', linestyle='--', label='y = 0')
+    # scale
+    max_y1 = max(abs(ssies3_data[f'{ssies3_v_str}_x'].min()), ssies3_data[f'{ssies3_v_str}_x'].max())
+    max_y2 = max(abs(ssm_data[f'{ssm_v_str}_x'].min()), ssm_data[f'{ssm_v_str}_x'].max())
+    # 设定缩放比例，根据两侧数据的最大值决定
+    scale_factor = max_y1 / max_y2
+    max_y2_scaled = max_y2 * scale_factor
+    common_limit = max(max_y1, max_y2_scaled) * 1.1
+    ax1.set_ylim(-common_limit, common_limit)
+    ax1_t.set_ylim(-common_limit / scale_factor, common_limit / scale_factor)  # 使用缩放比例调整
+    # y label
+    ax1.set_ylabel(f'{ssies3_v_str}_x ({ssies3_unit})', color='tab:blue')
+    ax1_t.set_ylabel(f'{ssm_v_str}_x ({ssm_unit})', color='tab:orange')
+    # title
+    ax1.set_title('x direction')
+
+    # y
+    ax2_t = ax2.twinx()
+    # plot
+    ax2.plot(ssies3_data['Epoch'], ssies3_data[f'{ssies3_v_str}_y'], 'tab:blue')
+    ax2_t.plot(ssm_data['Epoch'], ssm_data[f'{ssm_v_str}_y'], 'tab:orange')
+    # datetime locator
+    ax2.xaxis.set_major_locator(mdates.MinuteLocator(byminute=[0, 25, 30, 45]))  # 只在某些时刻显示刻度
+    ax2.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))  # 格式化显示格式
+    # 在y=0处添加一条红色虚线
+    ax2.axhline(y=0, color='black', linestyle='--', label='y = 0')
+    # scale
+    max_y1 = max(abs(ssies3_data[f'{ssies3_v_str}_y'].min()), ssies3_data[f'{ssies3_v_str}_y'].max())
+    max_y2 = max(abs(ssm_data[f'{ssm_v_str}_y'].min()), ssm_data[f'{ssm_v_str}_y'].max())
+    # 设定缩放比例，根据两侧数据的最大值决定
+    scale_factor = max_y1 / max_y2
+    max_y2_scaled = max_y2 * scale_factor
+    common_limit = max(max_y1, max_y2_scaled) * 1.1
+    ax2.set_ylim(-common_limit, common_limit)
+    ax2_t.set_ylim(-common_limit / scale_factor, common_limit / scale_factor)  # 使用缩放比例调整
+    # y label
+    ax2.set_ylabel(f'{ssies3_v_str}_y ({ssies3_unit})', color='tab:blue')
+    ax2_t.set_ylabel(f'{ssm_v_str}_y ({ssm_unit})', color='tab:orange')
+    # title
+    ax2.set_title('y direction')
+
+    # z
+    ax3_t = ax3.twinx()
+    # plot
+    ax3.plot(ssies3_data['Epoch'], ssies3_data[f'{ssies3_v_str}_z'], 'tab:blue')
+    ax3_t.plot(ssm_data['Epoch'], ssm_data[f'{ssm_v_str}_z'], 'tab:orange')
+    # datetime locator
+    ax3.xaxis.set_major_locator(mdates.MinuteLocator(byminute=[0, 25, 30, 45]))  # 只在某些时刻显示刻度
+    ax3.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))  # 格式化显示格式
+    # 在y=0处添加一条红色虚线
+    ax3.axhline(y=0, color='black', linestyle='--', label='y = 0')
+    # scale
+    max_y1 = max(abs(ssies3_data[f'{ssies3_v_str}_z'].min()), ssies3_data[f'{ssies3_v_str}_z'].max())
+    max_y2 = max(abs(ssm_data[f'{ssm_v_str}_z'].min()), ssm_data[f'{ssm_v_str}_z'].max())
+    # 设定缩放比例，根据两侧数据的最大值决定
+    scale_factor = max_y1 / max_y2
+    max_y2_scaled = max_y2 * scale_factor
+    common_limit = max(max_y1, max_y2_scaled) * 1.1
+    ax3.set_ylim(-common_limit, common_limit)
+    ax3_t.set_ylim(-common_limit / scale_factor, common_limit / scale_factor)  # 使用缩放比例调整
+    # y label
+    ax3.set_ylabel(f'{ssies3_v_str}_z ({ssies3_unit})', color='tab:blue')
+    ax3_t.set_ylabel(f'{ssm_v_str}_z ({ssm_unit})', color='tab:orange')
+    # title
+    ax3.set_title('z direction')
+
+    if is_save:
+        # save
+        save_fig_path = os.path.join(fig_save_path, f"f{satellite}_{dhm}_{title_part}.png")
+        plt.savefig(save_fig_path)
+        print(f"save f{satellite}_{dhm}_{title_part}.png")
+    return fig
 
 
 ### code back
