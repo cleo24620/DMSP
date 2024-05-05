@@ -863,23 +863,30 @@ def data_for_draw(ssies3_fp,ssm_fp,is_f17):
     return ssies3_data_SC, ssm_data_clip
 
 
-def draw_ssies3_ssm(ssies3_data:pd.DataFrame, ssm_data:pd.DataFrame, ssies3_v_str:str, ssm_v_str:str, ssies3_unit:str,
-                    ssm_unit:str, dhm:str, title_part:str,satellite:str, is_save=False,
-                    fig_save_path:Optional[str]=None):
+def draw_ssies3_ssm(left_data:pd.DataFrame, right_data:pd.DataFrame, left_v_strs:list, right_v_strs:list,
+                    left_unit:str, right_unit:str, dhm:str, title_part:str, satellite:str,
+                    is_save=False, fig_save_path:Optional[str]=None):
     """
     draw one orbit, different physical parameters, for example, plasma velocity and delta magnetic field or observed
     magnetic field and so on.
     the same coordinate system (for example: SC, GEO...).
-    :param ssm_unit: the ssm physical parameter's unit
-    :param ssies3_unit: the ssies3 physical parameter's unit
+    :param satellite: like this: '16'
+    :param right_unit: the ssm physical parameter's unit
+    :param left_unit: the ssies3 physical parameter's unit
     :param ssm_v_str: the ssm physical parameter
     :param ssies3_v_str: the ssies3 physical parameter
-    :param ssies3_data: the ssies3 data in the afssigned coordinate system, including 'Epoch',xyz components.
-    :param ssm_data: the clipped ssm data, including 'Epoch',xyz components.
+    :param left_data: the ssies3 data in the afssigned coordinate system, including 'Epoch',xyz components.
+    :param right_data: the clipped ssm data, including 'Epoch',xyz components.
     :param dhm: the data start day hour minute.
     :param title_part:
     :return:
     """
+    if is_save:
+        save_fig_path = os.path.join(fig_save_path, f"f{satellite}_{dhm}_{title_part}.png")
+        if os.path.isfile(save_fig_path):
+            print(f"ssies3_ssm_v_b_{dhm}.png exits, jump draw.")
+            return
+
     fig, axs = plt.subplots(3, 1, figsize=(20, 10 * 3))
     ax1 = axs[0]
     ax2 = axs[1]
@@ -891,8 +898,8 @@ def draw_ssies3_ssm(ssies3_data:pd.DataFrame, ssm_data:pd.DataFrame, ssies3_v_st
     # x
     ax1_t = ax1.twinx()  # 创建共享x轴的第二个y轴
     # plot
-    ax1.plot(ssies3_data['Epoch'], ssies3_data[f'{ssies3_v_str}_x'], 'tab:blue')
-    ax1_t.plot(ssm_data['Epoch'], ssm_data[f'{ssm_v_str}_x'], 'tab:orange')
+    ax1.plot(left_data['Epoch'], left_data[left_v_strs[0]], 'tab:blue')
+    ax1_t.plot(right_data['Epoch'], right_data[right_v_strs[0]], 'tab:orange')
     # datetime locator
     # because ax1_t share the ax1, so the locator just used in ax1.
     ax1.xaxis.set_major_locator(mdates.MinuteLocator(byminute=[0, 15, 30, 45]))  # 只在某些时刻显示刻度
@@ -900,8 +907,8 @@ def draw_ssies3_ssm(ssies3_data:pd.DataFrame, ssm_data:pd.DataFrame, ssies3_v_st
     # 在y=0处添加一条红色虚线
     ax1.axhline(y=0, color='black', linestyle='--', label='y = 0')
     # scale
-    max_y1 = max(abs(ssies3_data[f'{ssies3_v_str}_x'].min()), ssies3_data[f'{ssies3_v_str}_x'].max())
-    max_y2 = max(abs(ssm_data[f'{ssm_v_str}_x'].min()), ssm_data[f'{ssm_v_str}_x'].max())
+    max_y1 = max(abs(left_data[left_v_strs[0]].min()), left_data[left_v_strs[0]].max())
+    max_y2 = max(abs(right_data[right_v_strs[0]].min()), right_data[right_v_strs[0]].max())
     # 设定缩放比例，根据两侧数据的最大值决定
     scale_factor = max_y1 / max_y2
     max_y2_scaled = max_y2 * scale_factor
@@ -909,24 +916,24 @@ def draw_ssies3_ssm(ssies3_data:pd.DataFrame, ssm_data:pd.DataFrame, ssies3_v_st
     ax1.set_ylim(-common_limit, common_limit)
     ax1_t.set_ylim(-common_limit / scale_factor, common_limit / scale_factor)  # 使用缩放比例调整
     # y label
-    ax1.set_ylabel(f'{ssies3_v_str}_x ({ssies3_unit})', color='tab:blue')
-    ax1_t.set_ylabel(f'{ssm_v_str}_x ({ssm_unit})', color='tab:orange')
+    ax1.set_ylabel(f'{left_v_strs[0]} ({left_unit})', color='tab:blue')
+    ax1_t.set_ylabel(f'{right_v_strs[0]} ({right_unit})', color='tab:orange')
     # title
     ax1.set_title('x direction')
 
     # y
     ax2_t = ax2.twinx()
     # plot
-    ax2.plot(ssies3_data['Epoch'], ssies3_data[f'{ssies3_v_str}_y'], 'tab:blue')
-    ax2_t.plot(ssm_data['Epoch'], ssm_data[f'{ssm_v_str}_y'], 'tab:orange')
+    ax2.plot(left_data['Epoch'], left_data[left_v_strs[1]], 'tab:blue')
+    ax2_t.plot(right_data['Epoch'], right_data[right_v_strs[1]], 'tab:orange')
     # datetime locator
     ax2.xaxis.set_major_locator(mdates.MinuteLocator(byminute=[0, 25, 30, 45]))  # 只在某些时刻显示刻度
     ax2.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))  # 格式化显示格式
     # 在y=0处添加一条红色虚线
     ax2.axhline(y=0, color='black', linestyle='--', label='y = 0')
     # scale
-    max_y1 = max(abs(ssies3_data[f'{ssies3_v_str}_y'].min()), ssies3_data[f'{ssies3_v_str}_y'].max())
-    max_y2 = max(abs(ssm_data[f'{ssm_v_str}_y'].min()), ssm_data[f'{ssm_v_str}_y'].max())
+    max_y1 = max(abs(left_data[left_v_strs[1]].min()), left_data[left_v_strs[1]].max())
+    max_y2 = max(abs(right_data[right_v_strs[1]].min()), right_data[right_v_strs[1]].max())
     # 设定缩放比例，根据两侧数据的最大值决定
     scale_factor = max_y1 / max_y2
     max_y2_scaled = max_y2 * scale_factor
@@ -934,24 +941,24 @@ def draw_ssies3_ssm(ssies3_data:pd.DataFrame, ssm_data:pd.DataFrame, ssies3_v_st
     ax2.set_ylim(-common_limit, common_limit)
     ax2_t.set_ylim(-common_limit / scale_factor, common_limit / scale_factor)  # 使用缩放比例调整
     # y label
-    ax2.set_ylabel(f'{ssies3_v_str}_y ({ssies3_unit})', color='tab:blue')
-    ax2_t.set_ylabel(f'{ssm_v_str}_y ({ssm_unit})', color='tab:orange')
+    ax2.set_ylabel(f'{left_v_strs[1]} ({left_unit})', color='tab:blue')
+    ax2_t.set_ylabel(f'{right_v_strs[1]} ({right_unit})', color='tab:orange')
     # title
     ax2.set_title('y direction')
 
     # z
     ax3_t = ax3.twinx()
     # plot
-    ax3.plot(ssies3_data['Epoch'], ssies3_data[f'{ssies3_v_str}_z'], 'tab:blue')
-    ax3_t.plot(ssm_data['Epoch'], ssm_data[f'{ssm_v_str}_z'], 'tab:orange')
+    ax3.plot(left_data['Epoch'], left_data[left_v_strs[2]], 'tab:blue')
+    ax3_t.plot(right_data['Epoch'], right_data[right_v_strs[2]], 'tab:orange')
     # datetime locator
     ax3.xaxis.set_major_locator(mdates.MinuteLocator(byminute=[0, 25, 30, 45]))  # 只在某些时刻显示刻度
     ax3.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))  # 格式化显示格式
     # 在y=0处添加一条红色虚线
     ax3.axhline(y=0, color='black', linestyle='--', label='y = 0')
     # scale
-    max_y1 = max(abs(ssies3_data[f'{ssies3_v_str}_z'].min()), ssies3_data[f'{ssies3_v_str}_z'].max())
-    max_y2 = max(abs(ssm_data[f'{ssm_v_str}_z'].min()), ssm_data[f'{ssm_v_str}_z'].max())
+    max_y1 = max(abs(left_data[left_v_strs[2]].min()), left_data[left_v_strs[2]].max())
+    max_y2 = max(abs(right_data[right_v_strs[2]].min()), right_data[right_v_strs[2]].max())
     # 设定缩放比例，根据两侧数据的最大值决定
     scale_factor = max_y1 / max_y2
     max_y2_scaled = max_y2 * scale_factor
@@ -959,14 +966,12 @@ def draw_ssies3_ssm(ssies3_data:pd.DataFrame, ssm_data:pd.DataFrame, ssies3_v_st
     ax3.set_ylim(-common_limit, common_limit)
     ax3_t.set_ylim(-common_limit / scale_factor, common_limit / scale_factor)  # 使用缩放比例调整
     # y label
-    ax3.set_ylabel(f'{ssies3_v_str}_z ({ssies3_unit})', color='tab:blue')
-    ax3_t.set_ylabel(f'{ssm_v_str}_z ({ssm_unit})', color='tab:orange')
+    ax3.set_ylabel(f'{left_v_strs[2]} ({left_unit})', color='tab:blue')
+    ax3_t.set_ylabel(f'{right_v_strs[2]} ({right_unit})', color='tab:orange')
     # title
     ax3.set_title('z direction')
 
     if is_save:
-        # save
-        save_fig_path = os.path.join(fig_save_path, f"f{satellite}_{dhm}_{title_part}.png")
         plt.savefig(save_fig_path)
         print(f"save f{satellite}_{dhm}_{title_part}.png")
     return fig

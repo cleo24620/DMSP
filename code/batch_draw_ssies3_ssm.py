@@ -14,7 +14,7 @@ import pyDMSP
 
 # ssies3
 
-satellite = '18'
+satellite = '16'
 if satellite == '17':
     is_f17 = True
 else:
@@ -59,9 +59,9 @@ for ssies3_fp,ssies3_dhm,ssies3_day in zip(ssies3_info['fp'], ssies3_info['dhm']
                 #     continue
                 # Object CDFFile
                 ssies3_data, ssm_data = pyDMSP.data_for_draw(ssies3_fp, ssm_fp,is_f17=is_f17)
-                fig = pyDMSP.draw_ssies3_ssm(ssies3_data,ssm_data,ssies3_v_str='V_SC',ssm_v_str='DELTA_B_SC',
-                                             ssies3_unit='m/s',ssm_unit='nT',dhm=ssies3_dhm,
-                                             title_part='ssies3_ssm_v_delta_b',satellite=satellite,is_save=True,
+                fig = pyDMSP.draw_ssies3_ssm(ssies3_data, ssm_data, ssies3_v_str='V_SC', ssm_v_str='DELTA_B_SC',
+                                             left_unit='m/s', right_unit='nT', dhm=ssies3_dhm,
+                                             title_part='ssies3_ssm_v_delta_b', satellite=satellite, is_save=True,
                                              fig_save_path=fig_save_path)
                 plt.close(fig)
             except Exception as e:
